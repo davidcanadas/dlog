@@ -22,10 +22,9 @@
  * THE SOFTWARE.
  */
 
-#include "../dlog.h"
+#include "dlog_custom.h"
 #include "elapsed_time_formatter.h"
 #include "simple_formatter.h"
-#include "std_vector_value_writer.h"
 
 #include <cstdio>
 #include <vector>

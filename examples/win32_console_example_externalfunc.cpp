@@ -22,5 +22,5 @@
  * THE SOFTWARE.
  */
 
-#include "../dlog.h"
+#include "dlog_custom.h"
 void OtherTranslationUnitTest() { DLOG(DWARNING) << "This message comes from a different translation unit."; }

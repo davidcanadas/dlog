@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\dlog.h" />
+    <ClInclude Include="..\examples\dlog_custom.h" />
     <ClInclude Include="..\examples\elapsed_time_formatter.h" />
     <ClInclude Include="..\examples\simple_formatter.h" />
     <ClInclude Include="..\examples\std_vector_value_writer.h" />

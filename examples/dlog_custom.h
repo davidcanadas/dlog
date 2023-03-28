@@ -24,15 +24,5 @@
 
 #pragma once
 
-template<typename T>
-void dlogStringifyCustomType(dlog::TSTRINGSTREAM& inout_stream, const std::vector<T>& in_value) noexcept
-{
-    inout_stream << '[';
-    for (size_t i = 0, l = in_value.size(); i < l;)
-    {
-        dlog::StringifyBuiltInType(inout_stream, in_value.at(i));
-        if ((++i) != l)
-            inout_stream << ',';
-    }
-    inout_stream << ']';
-}
+#include "../dlog.h"
+#include "std_vector_value_writer.h"

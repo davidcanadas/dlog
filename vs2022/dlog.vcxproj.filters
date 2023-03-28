@@ -15,6 +15,10 @@
     <ClInclude Include="..\examples\std_vector_value_writer.h">
       <Filter>examples</Filter>
     </ClInclude>
+    <ClInclude Include="..\dlog.h" />
+    <ClInclude Include="..\examples\dlog_custom.h">
+      <Filter>examples</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\examples\win32_console_example.cpp">
