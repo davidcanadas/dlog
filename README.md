@@ -38,8 +38,6 @@ And enjoy logging!
 ---
 ## Customizing dlog
 
-&nbsp;
-
 ### Configurable options
 
 By default, dlog uses `char` (8-bit) for logging. However, you can define any other character type, like `wchar_t`, by declaring the macro `DLOG_CHARTYPE` with the appropriate type **before including `dlog.h`**.
@@ -84,6 +82,8 @@ replacing the function contents by your custom formatting algorithm. The functio
 Notice that argument `in_logLevelToStrFunc` represents the function to use in order to convert the log level given in `in_logLevel` to text.
 
 See _Adding custom log levels_ hereby for further information on adding and converting log levels to text.
+
+&nbsp;
 
 ### Adding custom log levels
 
