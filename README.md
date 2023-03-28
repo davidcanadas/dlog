@@ -34,6 +34,9 @@ And enjoy logging!
 DLOG(DDEBUG) << "Example message.";
 DLOG(DWARNING) << "Let's write some prime numbers... " << 2 << ', ' << 3 << ', ' << 5 << ', ' << 7 << "..."; 
 ```
+
+**If the `NDEBUG` macro is defined, **dlog** will not log any messages, no matter the log level, backends and formatters used.**
+
 ---
 ## Customizing **dlog**
 
