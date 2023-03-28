@@ -49,6 +49,12 @@
 #define DLOG_ALLOCATOR  std::allocator<DLOG_CHARTYPE>
 #endif//DLOG_ALLOCATOR
 
+#ifndef NDEBUG
+#define DLOG_DISABLED   0
+#else
+#define DLOG_DISABLED   1
+#endif//NDEBUG
+
 namespace dlog
 {
 using TCHARTYPE          = DLOG_CHARTYPE;
@@ -73,8 +79,10 @@ inline void StringifyBuiltInType(TSTRINGSTREAM& inout_stream, const TSTRINGVIEW&
 
 namespace impl
 {
+using TBACKENDFUNC = std::function<void(const TCHARTYPE*)>;
+template<typename TBASETYPE, int NDISABLELOGGER = DLOG_DISABLED> struct Frontend;
 template<typename TBASETYPE>
-struct Frontend
+struct Frontend<TBASETYPE,0>
 {
     const  TCHARTYPE* newLine = "\n";
     struct Stream
@@ -103,7 +111,6 @@ struct Frontend
         TSTRINGSTREAM m_out;
     };
 
-    using TBACKENDFUNC = std::function<void(const TCHARTYPE*)>;
     std::function<TSTRING(const TLOGLEVELTOSTRFUNC, const TSTRING&, const int)> formatter;
     int logLevel = DDEBUG;
 
@@ -142,8 +149,27 @@ private:
             it(message.c_str());
     }
 };
+
+template<typename TBASETYPE>
+struct Frontend<TBASETYPE,1>
+{
+    int logLevel = DDEBUG;
+    std::function<TSTRING(const TLOGLEVELTOSTRFUNC, const TSTRING&, const int)> formatter;
+    TLOGLEVELTOSTRFUNC logLevelFormatter;
+
+    struct Stream
+    {
+        Stream(const int in_logLevel) noexcept { ; }
+       ~Stream() = default;
+       template<typename T> Stream& operator<<(const T) noexcept { return *this; }
+    };
+
+    Frontend() = default;
+   ~Frontend() = default;
+    void operator+= (const TBACKENDFUNC&) noexcept  { ; }
+};
 }// impl.
 }// dlog.
 
-using DLog = ::dlog::impl::Frontend <dlog::TCHARTYPE>;
+using DLog = ::dlog::impl::Frontend<dlog::TCHARTYPE>;
 #define DLOG(in_level) ::DLog::Stream(in_level)
