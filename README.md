@@ -8,8 +8,6 @@ Simple, easy-to-use logger for your C++ programs.
 * Pretty much standard, no operating system headers dependencies.
 * Easily extendable with new message formatters, complex and/or custom data types...
 
-&nbsp;
-
 ## Adding dlog to your project
 
 Add the following header to every file requiring logging (or to your own header file!):
@@ -46,8 +44,6 @@ By default, dlog uses `std::allocator<DLOG_CHARTYPE>` to allocate strings and st
 
 The recommended way if you override either `DLOG_CHARTYPE` or `DLOG_ALLOCATOR` is to provide your own header to be included from your sources, instead of including `dlog.h` directly.
 
-&nbsp;
-
 ### Writing your own logging backends
 
 You can provide your own logging functions to dlog. If your backend has specific needs to manage resources, it's up to your program to handle that.
@@ -55,8 +51,6 @@ You can provide your own logging functions to dlog. If your backend has specific
 You can add your own backend appender functions using the `+=` operator on the `DLog` instance you've created. The function must honor the following signature: `void(const dlog::TCHARTYPE in_message)`, where `in_message` is the message to append.
 
 Backends cannot be removed. Backends are run in registration order. All backends share the minimum log level set.
-
-&nbsp;
 
 ### Writing your own formatter
 
@@ -83,8 +77,6 @@ Notice that argument `in_logLevelToStrFunc` represents the function to use in or
 
 See _Adding custom log levels_ hereby for further information on adding and converting log levels to text.
 
-&nbsp;
-
 ### Adding custom log levels
 
 Log levels are just plain signed integers. You can declare as many as you like. However, adding custom log levels implies providing your own function to convert them to text.
@@ -104,8 +96,6 @@ To set your own log level to text conversion function just do:
     };
 
 replacing the function contents by your custom conversion algorithm. The function should write converted data to the `inout_stream` provided as argument. Please notice that if you write your own function, you should take care of the built-in log levels `DDEBUG`, `DWARNING`, `DERROR`, `DFATAL` and `DCRITICAL`.
-
-&nbsp;
 
 ### Logging other data types
 
