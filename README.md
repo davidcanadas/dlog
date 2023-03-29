@@ -1,38 +1,33 @@
 # dlog
-Simple, easy-to-use logger for your C++ programs.
+The fast-path to get logging support in your C++ program.
 
 ## Features
 
-* One-header library, works out-of-the-box.
-* Support for multi-threaded logging.
-* Pretty much standard, no operating system headers dependencies.
-* Easily extendable with new message formatters, complex and/or custom data types...
+* One-header that works out-of-the-box.
+* Multi-threading support.
+* No operating system headers dependencies needed.
+* Can be extended with new formatters, complex data types logging support and custom log levels.
 
 ## Adding **dlog** to your project
 
-Add the following header to every file requiring logging (or to your own header file!):
 ```c++
 #include "dlog.h"
-```
-Create the `DLog` object somewhere. This object should be alive during the whole program lifecycle (recommended, not strictly necessary, though). Only one instance should exist.
-```c++
-DLog logger;
-```
 
-Configure the minimum log level to display:
-```c++
-// Minimum log level to display, either DDEBUG, DWARNING, DERROR, DFATAL or DCRITICAL. Defaults to DDEBUG.
-logger.logLevel = DDEBUG;
-```
-Add your backends of choice:
-```c++
-// Add a logging backend to print messages to the standard console.
-logger += [](const char* in_message) { printf(in_message); };
-```
-And enjoy logging!
-```c++
-DLOG(DDEBUG) << "Example message.";
-DLOG(DWARNING) << "Let's write some prime numbers... " << 2 << ', ' << 3 << ', ' << 5 << ', ' << 7 << "..."; 
+int main(int, char**)
+{
+    // The DLog object should last for your program whole lifecycle.
+    DLog logger;
+    
+    // Configure the minimum log level to display, either DDEBUG, DWARNING, DERROR, DFATAL or DCRITICAL. Defaults to DDEBUG.
+    logger.logLevel = DDEBUG;
+
+    // Add as many logging backensd as you like.
+    logger += [](const dlog::TCHARTYPE* in_message) { printf(in_message); };
+
+    // And... happy logging!
+    DLOG(DDEBUG) << "Example message.";
+    DLOG(DWARNING) << "Let's write some prime numbers... " << 2 << ', ' << 3 << ', ' << 5 << ', ' << 7 << "..."; 
+}
 ```
 
 **If the `NDEBUG` macro is defined, **dlog** will not log any messages, no matter the log level, backends and formatters used.**
@@ -81,7 +76,7 @@ replacing the function contents by your custom formatting algorithm. The functio
 
 Notice that argument `in_logLevelToStrFunc` represents the function to use in order to convert the log level given in `in_logLevel` to text.
 
-See [Adding custom log levels](#adding-custom-log-levels)] hereby for further information on adding and converting log levels to text.
+See [Adding custom log levels](#adding-custom-log-levels) hereby for further information on adding and converting log levels to text.
 
 ### Adding custom log levels
 
