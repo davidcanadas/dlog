@@ -24,105 +24,121 @@
 
 #pragma once
 
-#include <atomic>
-#include <cassert>
-#include <exception>
 #include <functional>
 #include <iomanip>
-#include <mutex>
 #include <sstream>
-#include <string>
-#include <string_view>
-#include <vector>
 
-#define DDEBUG          1000
-#define DWARNING        2000
-#define DERROR          5000
-#define DFATAL          7000
-#define DCRITICAL       9000
+#include <stdlib.h>
 
-#ifndef DLOG_CHARTYPE
-#define DLOG_CHARTYPE   char
-#endif//DLOG_CHARTYPE
+static constexpr int DINFO    = 1000;
+static constexpr int DWARNING = 3000;
+static constexpr int DERROR   = 5000;
+static constexpr int DDFATAL  = 7000;
+static constexpr int DFATAL   = 9000;
 
-#ifndef DLOG_ALLOCATOR
-#define DLOG_ALLOCATOR  std::allocator<DLOG_CHARTYPE>
-#endif//DLOG_ALLOCATOR
+struct dlogCharType;
+struct dlogAllocatorType;
+struct dlogDisableLogger;
 
-#ifndef NDEBUG
-#define DLOG_DISABLED   0
-#else
-#define DLOG_DISABLED   1
-#endif//NDEBUG
+using  dlogException = std::exception;
 
 namespace dlog
 {
-using TCHARTYPE          = DLOG_CHARTYPE;
-using TSTRING            = std::basic_string      <DLOG_CHARTYPE, std::char_traits<DLOG_CHARTYPE>, DLOG_ALLOCATOR>;
-using TSTRINGSTREAM      = std::basic_stringstream<DLOG_CHARTYPE, std::char_traits<DLOG_CHARTYPE>, DLOG_ALLOCATOR>;
-using TSTRINGVIEW        = std::basic_string_view <DLOG_CHARTYPE>;
-using TLOGLEVELTOSTRFUNC = std::function<void(TSTRINGSTREAM&, const int)>;
-using Exception          = std::exception;
+template<typename, typename = void> constexpr bool is_type_complete_v = false;
+template<typename T>                constexpr bool is_type_complete_v<T, std::void_t<decltype(sizeof(T))>> = true;
+template<typename TCONFIGTYPE, typename TDEFAULTIMPLICITTYPE, int NISCONFIGTYPECOMPLETE> struct TCONFIGIMPLICITTYPE;
+template<typename TCONFIGTYPE, typename TDEFAULTIMPLICITTYPE> struct TCONFIGIMPLICITTYPE<TCONFIGTYPE, TDEFAULTIMPLICITTYPE, 0> { using type = TDEFAULTIMPLICITTYPE; };
+template<typename TCONFIGTYPE, typename TDEFAULTIMPLICITTYPE> struct TCONFIGIMPLICITTYPE<TCONFIGTYPE, TDEFAULTIMPLICITTYPE, 1> { using type = typename TCONFIGTYPE::type; };
 
-template<typename T > 
-inline void StringifyBuiltInType(TSTRINGSTREAM& inout_stream, const T in_value) noexcept
+using TCHARTYPE     = TCONFIGIMPLICITTYPE<dlogCharType, char, is_type_complete_v<dlogCharType>>::type;
+using TSTRING       = std::basic_string      <TCHARTYPE, std::char_traits<TCHARTYPE>, TCONFIGIMPLICITTYPE<dlogAllocatorType, std::allocator<TCHARTYPE>, is_type_complete_v<dlogAllocatorType>>::type>;
+using TSTRINGSTREAM = std::basic_stringstream<TCHARTYPE, std::char_traits<TCHARTYPE>, TCONFIGIMPLICITTYPE<dlogAllocatorType, std::allocator<TCHARTYPE>, is_type_complete_v<dlogAllocatorType>>::type>;
+using TSTRINGVIEW   = std::basic_string_view <TCHARTYPE>;
+
+#ifndef NDEBUG
+static constexpr bool k_isDebugTarget = true ;
+#else
+static constexpr bool k_isDebugTarget = false;
+#endif//NDEBUG
+
+template<typename TBASETYPE> struct StringConstantsImpl;
+template<> struct StringConstantsImpl<char    > final { static constexpr const char*    s_false = "false", *s_true = "true", *s_hexPrefix = "0x", s_hexZeroCh = '0', *s_default = "default", *s_info = "INF", *s_warning = "WRN", *s_error = "ERR", *s_dfatal = "DBG", *s_fatal = "FTL"; };
+template<> struct StringConstantsImpl<wchar_t > final { static constexpr const wchar_t* s_false =L"false", *s_true =L"true", *s_hexPrefix =L"0x", s_hexZeroCh =L'0', *s_default =L"default", *s_info =L"INF", *s_warning =L"WRN", *s_error =L"ERR", *s_dfatal =L"DBG", *s_fatal =L"FTL"; };
+using StringConstants = StringConstantsImpl<TCHARTYPE>;
+}// dlog.
+
+using DLOGLEVELTOSTRFUNC = std::function<void(dlog::TSTRINGSTREAM&, const int)>;
+
+template<typename T> 
+inline void dlogStringifyBuiltInType(dlog::TSTRINGSTREAM& inout_stream, const T in_value) noexcept
 {
-    if      constexpr (std::is_fundamental<T>()) inout_stream << in_value;
-    else if constexpr (std::is_pointer    <T>()) inout_stream << "0x" << std::uppercase << std::setfill('0') << std::setw(sizeof(const void*)) << std::hex << in_value;
-    else    ::dlogStringifyCustomType(inout_stream, in_value);
+    using TBARETYPE = typename std::remove_reference<std::remove_cv<T>::type>::type;
+
+    if      constexpr (std::is_same<TBARETYPE, bool>()) inout_stream << (in_value ? dlog::StringConstants::s_true : dlog::StringConstants::s_false);
+    else if constexpr (std::is_same<TBARETYPE, std::remove_cv<const dlog::TCHARTYPE* const>::type>()) inout_stream << in_value;
+    else if constexpr (std::is_same<TBARETYPE, std::remove_cv<const dlog::TSTRING         >::type>()) inout_stream << in_value;
+    else if constexpr (std::is_same<TBARETYPE, std::remove_cv<const dlog::TSTRINGVIEW     >::type>()) inout_stream << in_value;
+    else if constexpr (std::is_fundamental<TBARETYPE>()) inout_stream << in_value;
+    else if constexpr (std::is_pointer    <TBARETYPE>()) inout_stream << dlog::StringConstants::s_hexPrefix << std::uppercase << std::setfill(dlog::StringConstants::s_hexZeroCh) << std::setw(sizeof(const void*)) << std::hex << in_value;
+    else ::dlogStringifyCustomType(inout_stream, in_value);
 }
 
-inline void StringifyBuiltInType(TSTRINGSTREAM& inout_stream, const bool         in_value) noexcept { inout_stream <<(in_value  ? "true" : "false"); }
-inline void StringifyBuiltInType(TSTRINGSTREAM& inout_stream, const TCHARTYPE*   in_value) noexcept { inout_stream << in_value; }
-inline void StringifyBuiltInType(TSTRINGSTREAM& inout_stream, const TSTRING&     in_value) noexcept { inout_stream << in_value.c_str(); }
-inline void StringifyBuiltInType(TSTRINGSTREAM& inout_stream, const TSTRINGVIEW& in_value) noexcept { inout_stream << in_value; }
+namespace dlog
+{
+struct Frontend final
+{
+    using TBACKENDFUNC = std::function<void(const TCHARTYPE*, const TCHARTYPE*)>;
+    const TCHARTYPE* newLine = "\n";
 
-namespace impl
-{
-using TBACKENDFUNC = std::function<void(const TCHARTYPE*)>;
-template<typename TBASETYPE, int NDISABLELOGGER = DLOG_DISABLED> struct Frontend;
-template<typename TBASETYPE>
-struct Frontend<TBASETYPE,0>
-{
-    const  TCHARTYPE* newLine = "\n";
-    struct Stream
+    template<int NLOGLEVEL>
+    struct Stream final
     {
-        Stream(const int in_logLevel) noexcept : m_logLevel(in_logLevel) { ; }
+        static constexpr bool k_streamEnabled = !(::dlog::is_type_complete_v<dlogDisableLogger> || (!k_isDebugTarget && (NLOGLEVEL == DDFATAL)));
+        Stream(const TCHARTYPE* in_categoryName = StringConstants::s_default) noexcept
+            : m_baseLogLevel(k_streamEnabled ? (*Frontend::GetInstancePtr()).logLevel : 0)
+            , m_categoryName(in_categoryName) 
+        { ; }
+
        ~Stream() noexcept 
         { 
-            if (m_baseLogLevel <= m_logLevel)
+            if constexpr (k_streamEnabled)
             {
-                Frontend& frontend = *Frontend::GetInstancePtr();
-                m_out  << frontend.newLine;
-                frontend.Post(m_out.str(), m_logLevel);
+                if (m_baseLogLevel <= NLOGLEVEL)
+                {
+                    Frontend& frontend = *Frontend::GetInstancePtr();
+                    m_out  << frontend.newLine;
+                    frontend.Post(m_out.str(), NLOGLEVEL, m_categoryName);
+                    if constexpr (NLOGLEVEL >= DDFATAL)
+                        exit(EXIT_FAILURE);
+                }
             }
         }
 
         template<typename T> Stream& operator<<(const T in_value) noexcept
         {
-            if (m_baseLogLevel <= m_logLevel)
-                StringifyBuiltInType(m_out, in_value);
+            if constexpr (k_streamEnabled)
+                if (m_baseLogLevel <= NLOGLEVEL)
+                    ::dlogStringifyBuiltInType(m_out, in_value);
             return  *this;
         }
 
     private:
-        const int m_logLevel = DDEBUG;
-        const int m_baseLogLevel = (*Frontend::GetInstancePtr()).logLevel;
+        const int m_baseLogLevel;
+        const TCHARTYPE* m_categoryName;
         TSTRINGSTREAM m_out;
     };
 
-    std::function<TSTRING(const TLOGLEVELTOSTRFUNC, const TSTRING&, const int)> formatter;
-    int logLevel = DDEBUG;
-
-    TLOGLEVELTOSTRFUNC logLevelFormatter = [](TSTRINGSTREAM& inout_stream, const int in_logLevel) noexcept
+    int logLevel = DINFO;
+    std::function<TSTRING(const DLOGLEVELTOSTRFUNC, const TSTRING&, const int)> formatter;
+    DLOGLEVELTOSTRFUNC logLevelFormatter = [](TSTRINGSTREAM& inout_stream, const int in_logLevel) noexcept
     {
         switch (in_logLevel)
         {
-        case DDEBUG   : inout_stream << "DBG"; break;
-        case DWARNING : inout_stream << "WRN"; break;
-        case DERROR   : inout_stream << "ERR"; break;
-        case DFATAL   : inout_stream << "FAT"; break;
-        case DCRITICAL: inout_stream << "CRT"; break;
+        case DINFO    : inout_stream << StringConstants::s_info;    break;
+        case DWARNING : inout_stream << StringConstants::s_warning; break;
+        case DERROR   : inout_stream << StringConstants::s_error;   break;
+        case DDFATAL  : inout_stream << StringConstants::s_dfatal;  break;
+        case DFATAL   : inout_stream << StringConstants::s_fatal;   break;
         }
     };
 
@@ -130,7 +146,7 @@ struct Frontend<TBASETYPE,0>
     {
         Frontend* instancePtr = nullptr;
         if (!std::atomic_compare_exchange_strong(&GetInstancePtr(), &instancePtr, this))
-            throw Exception();
+            throw dlogException();
     }
 
    ~Frontend() { std::atomic_store(&GetInstancePtr(), nullptr); }
@@ -138,38 +154,15 @@ struct Frontend<TBASETYPE,0>
 
 private:
     std::vector<TBACKENDFUNC> m_backends;
-    std::mutex m_backendsMutex;
-
     static std::atomic<Frontend*>& GetInstancePtr() noexcept { static std::atomic<Frontend*> instancePtr; return instancePtr; }
-    void Post(const TSTRING& in_message, const int in_logLevel) noexcept
+    void Post(const TSTRING& in_message, const int in_logLevel, const TCHARTYPE* in_optCategoryName) noexcept
     {
         const TSTRING&& message = formatter ? std::move(formatter(logLevelFormatter, in_message, in_logLevel)) : in_message;
-        std::scoped_lock(m_backendMutex);
         for (auto& it  : m_backends)
-            it(message.c_str());
+            it(message.c_str(), in_optCategoryName);
     }
 };
-
-template<typename TBASETYPE>
-struct Frontend<TBASETYPE,1>
-{
-    int logLevel = DDEBUG;
-    std::function<TSTRING(const TLOGLEVELTOSTRFUNC, const TSTRING&, const int)> formatter;
-    TLOGLEVELTOSTRFUNC logLevelFormatter;
-
-    struct Stream
-    {
-        Stream(const int in_logLevel) noexcept { ; }
-       ~Stream() = default;
-       template<typename T> Stream& operator<<(const T) noexcept { return *this; }
-    };
-
-    Frontend() = default;
-   ~Frontend() = default;
-    void operator+= (const TBACKENDFUNC&) noexcept  { ; }
-};
-}// impl.
 }// dlog.
 
-using DLog = ::dlog::impl::Frontend<dlog::TCHARTYPE>;
-#define DLOG(in_level) ::DLog::Stream(in_level)
+using DLog = ::dlog::Frontend;
+#define DLOG(in_logLevel, ...) ::DLog::Stream<in_logLevel>(__VA_ARGS__)

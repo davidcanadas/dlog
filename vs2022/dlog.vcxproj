@@ -27,7 +27,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\examples\win32_console_example.cpp" />
-    <ClCompile Include="..\examples\win32_console_example_externalfunc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\LICENSE" />

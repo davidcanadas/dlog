@@ -26,53 +26,50 @@
 #include "elapsed_time_formatter.h"
 #include "simple_formatter.h"
 
+#include <climits>
 #include <cstdio>
+#include <mutex>
 #include <vector>
 #include <string>
 
-#define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
-#include <Windows.h>
-
-extern void OtherTranslationUnitTest();
-
 int main(int, char**)
 {
-    const std::vector<int> somePrimes = { 2, 3, 5, 7, 11 };
-    
+    std::mutex defaultBackendMutex;
     DLog logger;
     logger.logLevel = DWARNING;
-    logger += [](const char* in_message) { OutputDebugStringA(in_message); };
-    logger += [](const char* in_message) { printf(in_message); };
+    logger += [](const char* in_message, const char* in_categoryName)  
+    {
+        std::scoped_lock(defaultBackendMutex);
+        printf("[%s] %s", in_categoryName, in_message); 
+    };
     logger.formatter = SimpleFormatter;
 
-    DLOG(DWARNING) << "Custom type is " << typeid(somePrimes).name() << ".";
-    DLOG(DWARNING) << "Memory address " << &somePrimes << ".";
-    DLOG(DWARNING) << somePrimes.size() << " elements: " << somePrimes << ".";
-    DLOG(DWARNING) << "================================================================";
-    OtherTranslationUnitTest();
+    DLOG(DWARNING) << "bool..............: " << bool              (false    ) << ", " << bool              (true      ) << ".";
+    DLOG(DWARNING) << "char..............: " << char              ('A'      ) << ", " << char              ('Z'       ) << ".";
+    DLOG(DWARNING) << "unsigned char.....: " << unsigned char     ('a'      ) << ", " << unsigned char     ('z'       ) << ".";
+    DLOG(DWARNING) << "signed char.......: " << signed char       ('@'      ) << ", " << signed char       ('!'       ) << ".";
+    DLOG(DWARNING) << "unsigned short....: " << unsigned short    (0        ) << ", " << unsigned short    (USHRT_MAX ) << ".";
+    DLOG(DWARNING) << "short.............: " << short             (SHRT_MIN ) << ", " << short             (SHRT_MAX  ) << ".";
+    DLOG(DWARNING) << "unsigned int......: " << unsigned int      (0        ) << ", " << unsigned int      (UINT_MAX  ) << ".";
+    DLOG(DWARNING) << "int...............: " << int               (INT_MIN  ) << ", " << int               (INT_MAX   ) << ".";
+    DLOG(DWARNING) << "unsigned long.....: " << unsigned long     (0        ) << ", " << unsigned long     (ULONG_MAX ) << ".";
+    DLOG(DWARNING) << "long..............: " << long              (LONG_MIN ) << ", " << long              (LONG_MAX  ) << ".";
+    DLOG(DWARNING) << "unsigned long long: " << unsigned long long(0        ) << ", " << unsigned long long(ULLONG_MAX) << ".";
+    DLOG(DWARNING) << "long long.........: " << long long         (LLONG_MIN) << ", " << long long         (LLONG_MAX ) << ".";
+    DLOG(DWARNING) << "float.............: " << float             (FLT_MIN  ) << ", " << float             (FLT_MAX   ) << ".";
+    DLOG(DWARNING) << "double............: " << double            (DBL_MIN  ) << ", " << double            (DBL_MAX   ) << ".";
+    DLOG(DWARNING) << "pointer...........: " << &logger << ".";
 
-    DLOG(DDEBUG)   << "This message will not be displayed.";
-    
-    DLOG(DWARNING) << "================================================================";
-    DLOG(DWARNING) << "bool               = " << false << ", " << true << ".";
-    DLOG(DWARNING) << "char               = " << char          ('A') << ", " << char          ('B') << ".";
-    DLOG(DWARNING) << "unsigned char      = " << unsigned char ('C') << ", " << unsigned char ('D') << ".";
-    DLOG(DWARNING) << "signed char        = " << signed   char ('E') << ", " << signed   char ('F') << ".";
-    DLOG(DWARNING) << "unsigned short     = " << unsigned short( 0 ) << ", " << unsigned short( 1 ) << ".";
-    DLOG(DWARNING) << "short              = " << short         ( 2 ) << ", " << short         (-3 ) << ".";
-    DLOG(DWARNING) << "unsigned int       = " << 4u    << ", " <<  5u    << ".";
-    DLOG(DWARNING) << "int                = " << 6     << ", " << -7     << ".";
-    DLOG(DWARNING) << "unsigned long      = " << 8lu   << ", " <<  9lu   << ".";
-    DLOG(DWARNING) << "long               = " << 10l   << ", " << -11l   << ".";
-    DLOG(DWARNING) << "unsigned long long = " << 12llu << ", " <<  13llu << ".";
-    DLOG(DWARNING) << "long long          = " << 14ll  << ", " << -15ll  << ".";
-    DLOG(DWARNING) << "float              = " << float (16.123) << ", " << float (-17.456) << ".";
-    DLOG(DWARNING) << "double             = " << double(18.789) << ", " << double(-19.000) << ".";
+    DLOG(DWARNING) << "const char*.......: " << "Hello, world.";
+    DLOG(DWARNING) << "std::string.......: " << std::string("Hello, world.").c_str();
+    DLOG(DWARNING) << "std::string_view..: " << std::string_view(std::string("Hello, world.").c_str() + sizeof("Hello, ") - 1, sizeof("world.") - 1);
 
-    DLOG(DWARNING) << "================================================================";
-    std::string testString = "HELLO, WORLD";
-    std::string_view testStringView(testString.c_str() + sizeof("HELLO, ") - 1, sizeof("WORLD") - 1);
-    DLOG(DWARNING) << "std::string        = " << testString     << ".";
-    DLOG(DWARNING) << "std::string_view   = " << testStringView << ".";
+    const std::vector<int> somePrimes  = { 2, 3, 5, 7, 11 };
+    DLOG(DWARNING) << "Custom type.......: " << somePrimes << ".";
+    DLOG(DINFO   ) << "This message will not be displayed.";
+    DLOG(DWARNING, "Foo") << "Logging message to custom category \"Foo\".";
+    DLOG(DERROR  ) << "Error-level message.";
+    DLOG(DDFATAL ) << "This message (1) should be the last one if NDEBUG is undefined.";
+    DLOG(DFATAL  ) << "This message (2) should be the last one.";
+    DLOG(DINFO   ) << "This message will not be displayed because the program should have exited...";
 }

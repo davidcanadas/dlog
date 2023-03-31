@@ -27,9 +27,9 @@
 #include <chrono>
 #include <ctime>
 
-inline dlog::TSTRING SimpleFormatter(const dlog::TLOGLEVELTOSTRFUNC& in_logLevelToStrFunc, const dlog::TSTRING& in_message, const int in_logLevel) noexcept
+inline std::string SimpleFormatter(const DLOGLEVELTOSTRFUNC& in_logLevelToStrFunc, const std::string& in_message, const int in_logLevel) noexcept
 {
-    dlog::TSTRINGSTREAM ss;
+    std::stringstream ss;
     in_logLevelToStrFunc(ss, in_logLevel);
     ss << " - ";
 

@@ -24,5 +24,10 @@
 
 #pragma once
 
+#include <memory>
+
+struct dlogCharType      { using type = char; };
+struct dlogAllocatorType { using type = std::allocator<dlogCharType::type>; };
+
 #include "../dlog.h"
 #include "std_vector_value_writer.h"

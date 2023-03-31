@@ -3,122 +3,114 @@ The fast-path to get logging support in your C++ program.
 
 ## Features
 
-* One-header that works out-of-the-box.
-* Multi-threading support.
-* No operating system headers dependencies needed.
-* Can be extended with new formatters, complex data types logging support and custom log levels.
+* One-header, works out-of-the-box.
+* Multi-thread-ready.
+* No operating system headers needed.
+* Extendable with custom formatters, types and log levels.
 
-## Adding **dlog** to your project
+## Using **dlog** in your programs
 
 ```c++
 #include "dlog.h"
 
 int main(int, char**)
 {
-    // The DLog object should last for your program whole lifecycle.
-    DLog logger;
-    
-    // Configure the minimum log level to display, either DDEBUG, DWARNING, DERROR, DFATAL or DCRITICAL. Defaults to DDEBUG.
-    logger.logLevel = DDEBUG;
+    DLog logger; // The persistent DLog object (must live as long as your program do!).
+    logger.logLevel = DDEBUG; // Configure the min. level to display, either DINFO, DWARNING, DERROR, DDFATAL or DFATAL.
 
-    // Add as many logging backensd as you like.
-    logger += [](const dlog::TCHARTYPE* in_message) { printf(in_message); };
+    // Add a backend to send data to the standard output.
+    logger += [](const char* in_message, const char* in_categoryName) { printf("[%s] %s", in_categoryName, in_message); };
 
-    // And... happy logging!
+    // We're done... Happy logging!
     DLOG(DDEBUG) << "Example message.";
     DLOG(DWARNING) << "Let's write some prime numbers... " << 2 << ', ' << 3 << ', ' << 5 << ', ' << 7 << "..."; 
 }
 ```
+### Built-in log levels
 
-**If the `NDEBUG` macro is defined, **dlog** will not log any messages, no matter the log level, backends and formatters used.**
+| Level | Description |
+| --- | --- |
+| `DINFO` | Informational messages. |
+| `DWARNING` | Warnings. |
+| `DERROR` | Recoverable errors. |
+| `DDFATAL` | Only if `NDEBUG` is undefined. Fatal errors. Program will exit automatically after using this log level. |
+| `DFATAL` | Fatal errors. Program will exit automatically after using this log level. |
 
----
+### Built-in data types support
+
+The following data types are supported out of the box: `bool`, `char` (or `wchar_t`), `unsigned char` (or `unsigned wchar_t`), `signed char` (or `signed wchar_t`), `unsigned short`, `short`, `unsigned int`, `int`, `unsigned long`, `long`, `unsigned long long`, `float`, `double`, `pointer`, `const char*`, `std::string` and `std::string_view`.
+
 ## Customizing **dlog**
 
-### Configurable options
-
-By default, **dlog** uses `char` (8-bit) for logging. However, you can define any other character type, like `wchar_t`, by declaring the macro `DLOG_CHARTYPE` with the appropriate type **before including `dlog.h`**.
-
-By default, **dlog** uses `std::allocator<DLOG_CHARTYPE>` to allocate strings and string streams. However, you can define any other allocator by declaring the macro `DLOG_ALLOCATOR` with the appropriate type **before including `dlog.h`**.
-
-The recommended way if you override either `DLOG_CHARTYPE` or `DLOG_ALLOCATOR` is to provide your own header to be included from your sources, instead of including `dlog.h` directly (see [Examples](#examples) for more info).
-
-### Writing your own logging backends
-
-You can provide your own logging functions to **dlog**. If your backend has specific needs to manage resources, it's up to your program to handle that.
-
-You can add your own backend appender functions using the `+=` operator on the `DLog` instance you've created. The function must honor the following signature: `void(const dlog::TCHARTYPE in_message)`, where `in_message` is the message to append.
-
-Backends are run in registration order and cannot be removed. 
-
-**dlog** only sends messages to backends if the minimum log level is honored. However, if you need a different minimum log level for any specific backend, you can check for such log level in your own backend function.
-
-### Writing your own formatter
-
-You can provide your own formatting function for messages. If your formatter has specific needs to manage resources, it's up to your program to handle that.
-
-To set your own formatting function just do:
 ```c++
-logger.formatter = []
-(
-    const dlog::TLOGLEVELTOSTRFUNC& in_logLevelToStrFunc, 
-    const dlog::TSTRING& in_message, 
-    const int in_logLevel
-) noexcept
-{
-    dlog::TSTRINGSTREAM ss;
-    in_logLevelToStrFunc(ss, in_logLevel);
-    ss << " - " << in_message;
-    return  ss.str();
-}
-```
-replacing the function contents by your custom formatting algorithm. The function should return a `std::string` object with the formatted message.
+struct dlogCharType      { using type = wchar_t; }; // Define with the type of choice if you don't want to use char.
+struct dlogAllocatorType { using type = std::allocator<dlogCharType::type>; }; // Define with the allocator of choice if you don't want to use std::allocator<char>.
+struct dlogDisableLogger { }; // Define in order to disable logging.
 
-Notice that argument `in_logLevelToStrFunc` represents the function to use in order to convert the log level given in `in_logLevel` to text.
+// Definitions should come BEFORE including dlog.h.
+// Recommended way is to create your own header file that configures the logger and then includes dlog.h.
 
-See [Adding custom log levels](#adding-custom-log-levels) hereby for further information on adding and converting log levels to text.
+#include "dlog.h"
 
-### Adding custom log levels
+#include <sstream>
+#include <string>
 
-Log levels are just plain signed integers. You can declare as many as you like. However, adding custom log levels implies providing your own function to convert them to text.
-
-To set your own log level to text conversion function just do:
-```c++
-logger.logLevelFormatter = [](dlog::TSTRINGSTREAM& inout_stream, const int in_logLevel) noexcept
-{
-    switch (in_logLevel)
-    {
-    case DDEBUG   : inout_stream << "DBG"; break;
-    case DWARNING : inout_stream << "WRN"; break;
-    case DERROR   : inout_stream << "ERR"; break;
-    case DFATAL   : inout_stream << "FAT"; break;
-    case DCRITICAL: inout_stream << "CRT"; break;
-    }
-};
-```
-replacing the function contents by your custom conversion algorithm. The function should write converted data to the `inout_stream` provided as argument. Please notice that if you write your own function, you should take care of the built-in log levels `DDEBUG`, `DWARNING`, `DERROR`, `DFATAL` and `DCRITICAL`.
-
-### Logging other data types
-
-You can provide your own functions to convert complex or custom data types to text so they can be logged. To do so you need to write your own function `dlogStringifyCustomType` for the type of choice, in the global namespace. This function should be either inlined or declared before using the `DLOG` macro. You can provide your own header including `dlog.h` along these function declarations if deemed necessary (see [Examples](#examples) for more info).
-
-Functions to convert custom types to text can make use of the built-in converters if needed. Take as example this conversion function for `std::vector<T>` (assuming that `T`, in this case, would be a type with an existing built-in or custom converter):
-```c++
+// Define as many dlogStringifyCustomType functions you'd like to add logging support for custom data types.
+// When logging a container, you can call dlogStringifyBuiltInType to try run the stringifier for any contained type, if exists.
+// Symbol should be available to *dlog*.
 template<typename T>
-void dlogStringifyCustomType(dlog::TSTRINGSTREAM& inout_stream, const std::vector<T>& in_value) noexcept
+void dlogStringifyCustomType(std::stringstream& inout_stream, const std::vector<T>& in_value) noexcept
 {
     inout_stream << '[';
     for (size_t i = 0, l = in_value.size(); i < l;)
     {
-        dlog::StringifyBuiltInType(inout_stream, in_value.at(i));
+        dlogStringifyBuiltInType(inout_stream, in_value.at(i));
         if ((++i) != l)
             inout_stream << ',';
     }
     inout_stream << ']';
 }
-```
----
 
+int main(int, char**)
+{
+    DLog logger;
+    std::mutex defaultBackendMutex; // Mutex to get multi-threaded backend support. 
+
+    // You can add your own backends to log your messages to. The character type to use depends on your character type of choice.
+    // Backends cannot be removed.
+    // Only messages honoring the minimum log level are displayed.
+    // However, you can run your own checks in your backend function to finetune each backend individually.
+    logger += [](const char* in_message, const char* in_categoryName)  
+    {
+        std::scoped_lock(defaultBackendMutex); // Multi-threading must be handled by the backend function.
+        printf("[%s] %s", in_categoryName, in_message); 
+    };
+
+    // You can override the default *log level to text* conversion function.
+    // The function must give support to the built-in log levels. You can extend that with custom log levels, though!
+    logger.logLevelFormatter = [](std::stringstream& inout_stream, const int in_logLevel) noexcept
+    {
+        switch (in_logLevel)
+        {
+        case DDEBUG   : inout_stream << "DBG"; break;
+        case DWARNING : inout_stream << "WRN"; break;
+        case DERROR   : inout_stream << "ERR"; break;
+        case DFATAL   : inout_stream << "FAT"; break;
+        case DCRITICAL: inout_stream << "CRT"; break;
+        }
+    };
+
+    // You can override the default formatter with your custom formatting function.
+    // The string and stream types depend on your character type of choice.
+    logger.formatter = [](const DLOGLEVELTOSTRFUNC& in_logLevelToStrFunc, const std::string& in_message, const int in_logLevel) noexcept
+    {
+        std::stringstream ss;
+        in_logLevelToStrFunc(ss, in_logLevel); // Run the log level to text conversion function.
+        ss << " - " << in_message;
+        return  ss.str();
+    }
+}
+```
 ## Examples
 
 An example solution for Visual Studio 2022 is provided under the folder `vs2022`. Check the following files for more information:
