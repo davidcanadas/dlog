@@ -38,5 +38,5 @@ inline std::string ElapsedTimeFormatter(const DLOGLEVELTOSTRFUNC& in_logLevelToS
     ss << std::setfill(' ') << std::setw(8) << std::chrono::duration_cast<std::chrono::milliseconds>(now - begin).count();
     ss << " ms - " << in_message;
 
-    return std::move(ss.str());
+    return ss.str();
 }
