@@ -111,6 +111,40 @@ int main(int, char**)
     }
 }
 ```
+
+### Avoiding side-effects
+
+Calling functions that cause side effects in your program while logging are generally a bad practice. Given the way **dlog** works, such functions would be called even when logging has been disabled. You can overcome this by providing your own logging macro that receives the message to log as argument:
+
+```c++
+#include "dlog.h"
+
+#ifndef NDEBUG
+#define USERDEFINEDLOG(in_logLevel, in_message) DLOG(in_logLevel) << in_message
+#else
+#define USERDEFINEDLOG(in_logLevel, in_message) do { } while(0)
+#endif//NDEBUG
+
+int main(int, char**)
+{
+    DLog logger;
+    std::mutex defaultBackendMutex; // Mutex to get multi-threaded backend support. 
+
+    // You can add your own backends to log your messages to. The character type to use depends on your character type of choice.
+    // Backends cannot be removed.
+    // Only messages honoring the minimum log level are displayed.
+    // However, you can run your own checks in your backend function to finetune each backend individually.
+    logger += [](const char* in_message, const char* in_categoryName)  
+    {
+        std::scoped_lock(defaultBackendMutex); // Multi-threading must be handled by the backend function.
+        printf("[%s] %s", in_categoryName, in_message); 
+    };
+    
+    DLOG(DINFO) << "This message will be logged always" << ".";
+    USERDEFINEDLOG(DINFO, "This message will be logged only if NDEBUG is undefined" << ".");
+}
+```
+
 ## Examples
 
 An example solution for Visual Studio 2022 is provided under the folder `vs2022`. Check the following files for more information:
