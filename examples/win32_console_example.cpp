@@ -32,6 +32,12 @@
 #include <vector>
 #include <string>
 
+#ifndef NDEBUG
+#define USERDEFINEDLOG(in_logLevel, in_message) DLOG(in_logLevel) << in_message
+#else
+#define USERDEFINEDLOG(in_logLevel, in_message) do { } while(0)
+#endif//NDEBUG
+
 int main(int, char**)
 {
     std::mutex defaultBackendMutex;
@@ -69,6 +75,7 @@ int main(int, char**)
     DLOG(DINFO   ) << "This message will not be displayed.";
     DLOG(DWARNING, "Foo") << "Logging message to custom category \"Foo\".";
     DLOG(DERROR  ) << "Error-level message.";
+    USERDEFINEDLOG(DWARNING, "This message uses a user-defined logger macro" << ' ' << "that only logs if Debug" << '.');
     DLOG(DDFATAL ) << "This message (1) should be the last one if NDEBUG is undefined.";
     DLOG(DFATAL  ) << "This message (2) should be the last one.";
     DLOG(DINFO   ) << "This message will not be displayed because the program should have exited...";
