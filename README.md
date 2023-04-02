@@ -16,7 +16,7 @@ The fast-path to get logging support in your C++ program.
 int main(int, char**)
 {
     DLog logger; // The persistent DLog object (must live as long as your program do!).
-    logger.logLevel = DDEBUG; // Configure the min. level to display, either DINFO, DWARNING, DERROR, DDFATAL or DFATAL.
+    logger.logLevel = DINFO; // Configure the min. level to display, either DINFO, DWARNING, DERROR, DDFATAL or DFATAL.
 
     // Add a backend to send data to the standard output.
     logger += [](const char* in_message, const char* in_categoryName) { printf("[%s] %s", in_categoryName, in_message); };
