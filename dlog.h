@@ -145,7 +145,7 @@ struct Frontend final
     };
 
     int logLevel = DINFO;
-    std::function<TSTRING(const DLOGLEVELTOSTRFUNC, const TSTRING&, const int)> formatter;
+    std::function<const TSTRING(const DLOGLEVELTOSTRFUNC, const TSTRING&, const int)> formatter;
     DLOGLEVELTOSTRFUNC logLevelFormatter = [](TSTRINGSTREAM& inout_stream, const int in_logLevel) noexcept
     {
         switch (in_logLevel)
@@ -173,9 +173,17 @@ private:
     static std::atomic<Frontend*>& GetInstancePtr() noexcept { static std::atomic<Frontend*> instancePtr; return instancePtr; }
     void Post(const TSTRING& in_message, const int in_logLevel, const TCHARTYPE* in_optCategoryName) noexcept
     {
-        const TSTRING&& message = formatter ? std::move(formatter(logLevelFormatter, in_message, in_logLevel)) : in_message;
-        for (auto& it  : m_backends)
-            it(message.c_str(), in_optCategoryName);
+        if (formatter)
+        {
+            const TSTRING&& message = formatter(logLevelFormatter, in_message, in_logLevel);
+            for (auto& it  : m_backends)
+                it(message.c_str(), in_optCategoryName);
+        }
+        else
+        {
+            for (auto& it  : m_backends)
+                it(in_message.c_str(), in_optCategoryName);
+        }
     }
 };
 }// dlog.

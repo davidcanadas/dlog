@@ -45,6 +45,5 @@ inline std::string SimpleFormatter(const DLOGLEVELTOSTRFUNC& in_logLevelToStrFun
         << std::setfill('0') << std::setw(2) << lt->tm_min         << ':' 
         << std::setfill('0') << std::setw(2) << lt->tm_sec         << ' '
         << "- " << in_message;
-
-    return ss.str();
+    return std::move(ss.str());
 }
