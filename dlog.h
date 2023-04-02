@@ -69,17 +69,23 @@ using StringConstants = StringConstantsImpl<TCHARTYPE>;
 
 using DLOGLEVELTOSTRFUNC = std::function<void(dlog::TSTRINGSTREAM&, const int)>;
 
-template<typename T> 
-inline void dlogStringifyBuiltInType(dlog::TSTRINGSTREAM& inout_stream, const T in_value) noexcept
+template<typename T, typename TRETURNTYPE = std::enable_if_t< std::is_fundamental_v<typename std::remove_reference_t<std::remove_cv_t<T>>> ||  std::is_pointer_v<T> ||  std::is_array_v<T>, void>> 
+inline TRETURNTYPE dlogStringifyBuiltInType(dlog::TSTRINGSTREAM& inout_stream, const T in_value) noexcept
 {
-    using TBARETYPE = typename std::remove_reference<std::remove_cv<T>::type>::type;
-
+    using   TBARETYPE = typename std::remove_reference<std::remove_cv<T>::type>::type;
     if      constexpr (std::is_same<TBARETYPE, bool>()) inout_stream << (in_value ? dlog::StringConstants::s_true : dlog::StringConstants::s_false);
     else if constexpr (std::is_same<TBARETYPE, std::remove_cv<const dlog::TCHARTYPE* const>::type>()) inout_stream << in_value;
-    else if constexpr (std::is_same<TBARETYPE, std::remove_cv<const dlog::TSTRING         >::type>()) inout_stream << in_value;
-    else if constexpr (std::is_same<TBARETYPE, std::remove_cv<const dlog::TSTRINGVIEW     >::type>()) inout_stream << in_value;
     else if constexpr (std::is_fundamental<TBARETYPE>()) inout_stream << in_value;
     else if constexpr (std::is_pointer    <TBARETYPE>()) inout_stream << dlog::StringConstants::s_hexPrefix << std::uppercase << std::setfill(dlog::StringConstants::s_hexZeroCh) << std::setw(sizeof(const void*)) << std::hex << in_value;
+    else ::dlogStringifyCustomType(inout_stream, in_value);
+}
+
+template<typename T, typename TRETURNTYPE = std::enable_if_t<!std::is_fundamental_v<typename std::remove_reference_t<std::remove_cv_t<T>>> && !std::is_pointer_v<T> && !std::is_array_v<T>>> 
+inline void dlogStringifyBuiltInType(dlog::TSTRINGSTREAM& inout_stream, const T& in_value) noexcept
+{
+    using   TBARETYPE = typename std::remove_reference<std::remove_cv<T>::type>::type;
+    if      constexpr (std::is_same<TBARETYPE, std::remove_cv<const dlog::TSTRING    >::type>()) inout_stream << in_value;
+    else if constexpr (std::is_same<TBARETYPE, std::remove_cv<const dlog::TSTRINGVIEW>::type>()) inout_stream << in_value;
     else ::dlogStringifyCustomType(inout_stream, in_value);
 }
 
@@ -95,8 +101,8 @@ struct Frontend final
     {
         static constexpr bool k_streamEnabled = !(::dlog::is_type_complete_v<dlogDisableLogger> || (!k_isDebugTarget && (NLOGLEVEL == DDFATAL)));
         Stream(const TCHARTYPE* in_categoryName = StringConstants::s_default) noexcept
-            : m_baseLogLevel(k_streamEnabled ? (*Frontend::GetInstancePtr()).logLevel : 0)
-            , m_categoryName(in_categoryName) 
+            : m_baseLogLevel (k_streamEnabled ? (*Frontend::GetInstancePtr()).logLevel : 0)
+            , m_categoryName (in_categoryName) 
         { ; }
 
        ~Stream() noexcept 
@@ -114,7 +120,17 @@ struct Frontend final
             }
         }
 
-        template<typename T> Stream& operator<<(const T in_value) noexcept
+        template<typename T, typename TRETURNTYPE = std::enable_if_t< std::is_fundamental_v<typename std::remove_reference_t<std::remove_cv_t<T>>> ||  std::is_pointer_v<T> ||  std::is_array_v<T>, Stream>> 
+        TRETURNTYPE& operator<<(const T  in_value) noexcept
+        {
+            if constexpr (k_streamEnabled)
+                if (m_baseLogLevel <= NLOGLEVEL)
+                    ::dlogStringifyBuiltInType(m_out, in_value);
+            return  *this;
+        }
+
+        template<typename T, typename TRETURNTYPE = std::enable_if_t<!std::is_fundamental_v<typename std::remove_reference_t<std::remove_cv_t<T>>> && !std::is_pointer_v<T> && !std::is_array_v<T>>> 
+        Stream& operator<<(const T& in_value) noexcept
         {
             if constexpr (k_streamEnabled)
                 if (m_baseLogLevel <= NLOGLEVEL)
