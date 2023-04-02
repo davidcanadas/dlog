@@ -121,4 +121,4 @@ An example solution for Visual Studio 2022 is provided under the folder `vs2022`
 ---
 
 *Licensed under the MIT license.*
-*This library is under active development and can contain bugs and/or non-portable code. Tested on Microsoft Windows/Visual Studio 2022 only!*
+*This library is under active development and can contain bugs and/or non-portable code. Tested on Microsoft Windows/Visual Studio 2022 (VC++ & Clang) only!*
