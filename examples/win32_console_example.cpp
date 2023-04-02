@@ -61,7 +61,7 @@ int main(int, char**)
     DLOG(DWARNING) << "pointer...........: " << &logger << ".";
 
     DLOG(DWARNING) << "const char*.......: " << "Hello, world.";
-    DLOG(DWARNING) << "std::string.......: " << std::string("Hello, world.").c_str();
+    DLOG(DWARNING) << "std::string.......: " << std::string("Hello, world.");
     DLOG(DWARNING) << "std::string_view..: " << std::string_view(std::string("Hello, world.").c_str() + sizeof("Hello, ") - 1, sizeof("world.") - 1);
 
     const std::vector<int> somePrimes  = { 2, 3, 5, 7, 11 };
