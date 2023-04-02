@@ -69,23 +69,23 @@ using StringConstants = StringConstantsImpl<TCHARTYPE>;
 
 using DLOGLEVELTOSTRFUNC = std::function<void(dlog::TSTRINGSTREAM&, const int)>;
 
-template<typename T, typename TRETURNTYPE = typename std::enable_if_t< std::is_fundamental_v<typename std::remove_reference_t<std::remove_cv_t<T>>> ||  std::is_pointer_v<T> ||  std::is_array_v<T>, void>> 
+template<typename T, typename TRETURNTYPE = std::enable_if_t< std::is_fundamental_v<std::remove_reference_t<std::remove_cv_t<T>>> ||  std::is_pointer_v<T> ||  std::is_array_v<T>, void>> 
 inline TRETURNTYPE dlogStringifyBuiltInType(dlog::TSTRINGSTREAM& inout_stream, const T in_value) noexcept
 {
-    using   TBARETYPE = typename std::remove_reference_t<typename std::remove_cv_t<T>>;
+    using   TBARETYPE = std::remove_reference_t<std::remove_cv_t<T>>;
     if      constexpr (std::is_same_v<TBARETYPE, bool>) inout_stream << (in_value ? dlog::StringConstants::s_true : dlog::StringConstants::s_false);
-    else if constexpr (std::is_same_v<TBARETYPE, typename std::remove_cv_t<const dlog::TCHARTYPE* const>>) inout_stream << in_value;
+    else if constexpr (std::is_same_v<TBARETYPE, std::remove_cv_t<const dlog::TCHARTYPE* const>>) inout_stream << in_value;
     else if constexpr (std::is_fundamental_v<TBARETYPE>) inout_stream << in_value;
     else if constexpr (std::is_pointer_v    <TBARETYPE>) inout_stream << dlog::StringConstants::s_hexPrefix << std::uppercase << std::setfill(dlog::StringConstants::s_hexZeroCh) << std::setw(sizeof(const void*)) << std::hex << in_value;
     else ::dlogStringifyCustomType(inout_stream, in_value);
 }
 
-template<typename T, typename TRETURNTYPE = typename std::enable_if_t<!std::is_fundamental_v<typename std::remove_reference_t<typename std::remove_cv_t<T>>> && !std::is_pointer_v<T> && !std::is_array_v<T>>> 
+template<typename T, typename TRETURNTYPE = std::enable_if_t<!std::is_fundamental_v<std::remove_reference_t<std::remove_cv_t<T>>> && !std::is_pointer_v<T> && !std::is_array_v<T>>> 
 inline void dlogStringifyBuiltInType(dlog::TSTRINGSTREAM& inout_stream, const T& in_value) noexcept
 {
-    using   TBARETYPE = typename std::remove_reference_t<typename std::remove_cv_t<T>>;
-    if      constexpr (std::is_same_v<TBARETYPE, typename std::remove_cv_t<const dlog::TSTRING    >>) inout_stream << in_value;
-    else if constexpr (std::is_same_v<TBARETYPE, typename std::remove_cv_t<const dlog::TSTRINGVIEW>>) inout_stream << in_value;
+    using   TBARETYPE = std::remove_reference_t<std::remove_cv_t<T>>;
+    if      constexpr (std::is_same_v<TBARETYPE, std::remove_cv_t<const dlog::TSTRING    >>) inout_stream << in_value;
+    else if constexpr (std::is_same_v<TBARETYPE, std::remove_cv_t<const dlog::TSTRINGVIEW>>) inout_stream << in_value;
     else ::dlogStringifyCustomType(inout_stream, in_value);
 }
 
@@ -120,7 +120,7 @@ struct Frontend final
             }
         }
 
-        template<typename T, typename TRETURNTYPE = std::enable_if_t< std::is_fundamental_v<typename std::remove_reference_t<std::remove_cv_t<T>>> ||  std::is_pointer_v<T> ||  std::is_array_v<T>, Stream>> 
+        template<typename T, typename TRETURNTYPE = std::enable_if_t< std::is_fundamental_v<std::remove_reference_t<std::remove_cv_t<T>>> ||  std::is_pointer_v<T> ||  std::is_array_v<T>, Stream>> 
         TRETURNTYPE& operator<<(const T  in_value) noexcept
         {
             if constexpr (k_streamEnabled)
@@ -129,7 +129,7 @@ struct Frontend final
             return  *this;
         }
 
-        template<typename T, typename TRETURNTYPE = std::enable_if_t<!std::is_fundamental_v<typename std::remove_reference_t<std::remove_cv_t<T>>> && !std::is_pointer_v<T> && !std::is_array_v<T>>> 
+        template<typename T, typename TRETURNTYPE = std::enable_if_t<!std::is_fundamental_v<std::remove_reference_t<std::remove_cv_t<T>>> && !std::is_pointer_v<T> && !std::is_array_v<T>>> 
         Stream& operator<<(const T& in_value) noexcept
         {
             if constexpr (k_streamEnabled)
