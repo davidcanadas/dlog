@@ -27,6 +27,7 @@
 #include <functional>
 #include <iomanip>
 #include <sstream>
+#include <type_traits>
 
 #include <stdlib.h>
 
@@ -65,6 +66,18 @@ template<typename TBASETYPE> struct StringConstantsImpl;
 template<> struct StringConstantsImpl<char    > final { static constexpr const char*    s_false = "false", *s_true = "true", *s_hexPrefix = "0x", s_hexZeroCh = '0', *s_default = "default", *s_info = "INF", *s_warning = "WRN", *s_error = "ERR", *s_dfatal = "DBG", *s_fatal = "FTL"; };
 template<> struct StringConstantsImpl<wchar_t > final { static constexpr const wchar_t* s_false =L"false", *s_true =L"true", *s_hexPrefix =L"0x", s_hexZeroCh =L'0', *s_default =L"default", *s_info =L"INF", *s_warning =L"WRN", *s_error =L"ERR", *s_dfatal =L"DBG", *s_fatal =L"FTL"; };
 using StringConstants = StringConstantsImpl<TCHARTYPE>;
+
+template<typename = void, typename... Args> struct has_customtype_stringifier : std::false_type { };
+template<typename... Args> struct has_customtype_stringifier<std::void_t<decltype(::dlogStringifyCustomType(std::declval<Args>()...))>, Args...> : std::true_type { };
+template<typename... Args> inline constexpr bool has_customtype_stringifier_v = has_customtype_stringifier<void, Args...>::value;
+
+template<class T>
+void InvokeCustomTypeStringifier(TSTRINGSTREAM& inout_stream, const T in_value) 
+{
+    static_assert(has_customtype_stringifier_v<TSTRINGSTREAM&, T>, "Missing dlogStringifyCustomType implementation for the given type. Check compiler error(s) for details.");
+    if constexpr (has_customtype_stringifier_v<TSTRINGSTREAM&, T>)
+        ::dlogStringifyCustomType(inout_stream,  in_value);
+}
 }// dlog.
 
 using DLOGLEVELTOSTRFUNC = std::function<void(dlog::TSTRINGSTREAM&, const int)>;
@@ -77,7 +90,7 @@ inline TRETURNTYPE dlogStringifyBuiltInType(dlog::TSTRINGSTREAM& inout_stream, c
     else if constexpr (std::is_same_v<TBARETYPE, std::remove_cv_t<const dlog::TCHARTYPE* const>>) inout_stream << in_value;
     else if constexpr (std::is_fundamental_v<TBARETYPE>) inout_stream << in_value;
     else if constexpr (std::is_pointer_v    <TBARETYPE>) inout_stream << dlog::StringConstants::s_hexPrefix << std::uppercase << std::setfill(dlog::StringConstants::s_hexZeroCh) << std::setw(sizeof(const void*)) << std::hex << in_value;
-    else ::dlogStringifyCustomType(inout_stream, in_value);
+    else dlog::InvokeCustomTypeStringifier(inout_stream, in_value);
 }
 
 template<typename T, typename TRETURNTYPE = std::enable_if_t<!std::is_fundamental_v<std::remove_reference_t<std::remove_cv_t<T>>> && !std::is_pointer_v<T> && !std::is_array_v<T>>> 
@@ -86,7 +99,7 @@ inline void dlogStringifyBuiltInType(dlog::TSTRINGSTREAM& inout_stream, const T&
     using   TBARETYPE = std::remove_reference_t<std::remove_cv_t<T>>;
     if      constexpr (std::is_same_v<TBARETYPE, std::remove_cv_t<const dlog::TSTRING    >>) inout_stream << in_value;
     else if constexpr (std::is_same_v<TBARETYPE, std::remove_cv_t<const dlog::TSTRINGVIEW>>) inout_stream << in_value;
-    else ::dlogStringifyCustomType(inout_stream, in_value);
+    else dlog::InvokeCustomTypeStringifier(inout_stream, in_value);
 }
 
 namespace dlog
