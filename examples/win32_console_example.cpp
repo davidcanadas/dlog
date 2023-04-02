@@ -75,7 +75,7 @@ int main(int, char**)
     DLOG(DINFO   ) << "This message will not be displayed.";
     DLOG(DWARNING, "Foo") << "Logging message to custom category \"Foo\".";
     DLOG(DERROR  ) << "Error-level message.";
-    USERDEFINEDLOG(DWARNING, "This message uses a user-defined logger macro" << ' ' << "that only logs if Debug" << '.');
+    USERDEFINEDLOG(DWARNING, "This message uses a user-defined macro" << ' ' << "that only logs if NDEBUG is undefined.");
     DLOG(DDFATAL ) << "This message (1) should be the last one if NDEBUG is undefined.";
     DLOG(DFATAL  ) << "This message (2) should be the last one.";
     DLOG(DINFO   ) << "This message will not be displayed because the program should have exited...";
