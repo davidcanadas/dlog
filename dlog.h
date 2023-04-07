@@ -47,6 +47,7 @@ namespace dlog
 {
 template<typename, typename = void> constexpr bool is_type_complete_v = false;
 template<typename T>                constexpr bool is_type_complete_v<T, std::void_t<decltype(sizeof(T))>> = true;
+
 template<typename TCONFIGTYPE, typename TDEFAULTIMPLICITTYPE, int NISCONFIGTYPECOMPLETE> struct TCONFIGIMPLICITTYPE;
 template<typename TCONFIGTYPE, typename TDEFAULTIMPLICITTYPE> struct TCONFIGIMPLICITTYPE<TCONFIGTYPE, TDEFAULTIMPLICITTYPE, 0> { using type = TDEFAULTIMPLICITTYPE; };
 template<typename TCONFIGTYPE, typename TDEFAULTIMPLICITTYPE> struct TCONFIGIMPLICITTYPE<TCONFIGTYPE, TDEFAULTIMPLICITTYPE, 1> { using type = typename TCONFIGTYPE::type; };
@@ -112,7 +113,7 @@ struct Frontend final
     template<int NLOGLEVEL>
     struct Stream final
     {
-        static constexpr bool k_streamEnabled = !(::dlog::is_type_complete_v<dlogDisableLogger> || (!k_isDebugTarget && (NLOGLEVEL == DDFATAL)));
+        static constexpr bool k_streamEnabled = !(is_type_complete_v<dlogDisableLogger> || (!k_isDebugTarget && (NLOGLEVEL == DDFATAL)));
         Stream(const TCHARTYPE* in_categoryName = StringConstants::s_default) noexcept
             : m_baseLogLevel (k_streamEnabled ? (*Frontend::GetInstancePtr()).logLevel : 0)
             , m_categoryName (in_categoryName) 
