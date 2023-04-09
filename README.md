@@ -44,7 +44,7 @@ The following data types are supported out of the box: `bool`, `char` (or `wchar
 
 ```c++
 // Character width (char vs wchar_t) depends on either UNICODE, _UNICODE or USE_WIDE_CHAR macros.
-struct dlogAllocatorType { using type = std::allocator<dlogCharType::type>; }; // Define with the allocator of choice if you don't want to use std::allocator<char>.
+struct dlogAllocatorType { using type = std::allocator<char>; }; // Define with the allocator of choice if you don't want to use std::allocator<char>.
 struct dlogDisableLogger { }; // Define in order to disable logging.
 
 // Definitions should come BEFORE including dlog.h.
