@@ -24,6 +24,11 @@
 
 #pragma once
 
+// This demo uses single-byte characters.
+#undef  UNICODE
+#undef _UNICODE
+#undef  USE_WIDE_CHAR
+
 #include <memory>
 #include <vector>
 
@@ -31,6 +36,6 @@ struct dlogCharType      { using type = char; };
 struct dlogAllocatorType { using type = std::allocator<dlogCharType::type>; };
 
 template<typename T> void dlogStringifyCustomType(std::stringstream& inout_stream, const std::vector<T>& in_value) noexcept;
+#include "std_vector_value_writer.h"
 
 #include "../dlog.h"
-#include "std_vector_value_writer.h"

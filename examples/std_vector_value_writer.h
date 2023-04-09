@@ -24,13 +24,15 @@
 
 #pragma once
 
+#include <sstream>
+
 template<typename T>
 void dlogStringifyCustomType(std::stringstream& inout_stream, const std::vector<T>& in_value) noexcept
 {
     inout_stream << '[';
     for (size_t i = 0, l = in_value.size(); i < l;)
     {
-        dlogStringifyBuiltInType(inout_stream, in_value.at(i));
+        ::dlogStringifyBuiltInType(inout_stream, in_value.at(i));
         if ((++i) != l)
             inout_stream << ',';
     }

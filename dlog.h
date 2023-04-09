@@ -24,12 +24,11 @@
 
 #pragma once
 
+#include <cstdlib>
 #include <functional>
 #include <iomanip>
 #include <sstream>
 #include <type_traits>
-
-#include <stdlib.h>
 
 static constexpr int DINFO    = 1000;
 static constexpr int DWARNING = 3000;
@@ -37,46 +36,48 @@ static constexpr int DERROR   = 5000;
 static constexpr int DDFATAL  = 7000;
 static constexpr int DFATAL   = 9000;
 
-struct dlogCharType;
 struct dlogAllocatorType;
 struct dlogDisableLogger;
 
-using  dlogException = std::exception;
-
 namespace dlog
 {
+using Exception = std::exception;
+
 template<typename, typename = void> constexpr bool is_type_complete_v = false;
-template<typename T>                constexpr bool is_type_complete_v<T, std::void_t<decltype(sizeof(T))>> = true;
+template<typename T> constexpr bool is_type_complete_v<T, std::void_t<decltype(sizeof(T))>> = true;
 
-template<typename TCONFIGTYPE, typename TDEFAULTIMPLICITTYPE, int NISCONFIGTYPECOMPLETE> struct TCONFIGIMPLICITTYPE;
-template<typename TCONFIGTYPE, typename TDEFAULTIMPLICITTYPE> struct TCONFIGIMPLICITTYPE<TCONFIGTYPE, TDEFAULTIMPLICITTYPE, 0> { using type = TDEFAULTIMPLICITTYPE; };
-template<typename TCONFIGTYPE, typename TDEFAULTIMPLICITTYPE> struct TCONFIGIMPLICITTYPE<TCONFIGTYPE, TDEFAULTIMPLICITTYPE, 1> { using type = typename TCONFIGTYPE::type; };
+template<typename TCONFIGTYPE, typename TDEFAULTIMPLICITTYPE, int NISCONFIGTYPECOMPLETE> struct configured_type;
+template<typename TCONFIGTYPE, typename TDEFAULTIMPLICITTYPE> struct configured_type<TCONFIGTYPE, TDEFAULTIMPLICITTYPE, 0> { using type = TDEFAULTIMPLICITTYPE; };
+template<typename TCONFIGTYPE, typename TDEFAULTIMPLICITTYPE> struct configured_type<TCONFIGTYPE, TDEFAULTIMPLICITTYPE, 1> { using type = typename TCONFIGTYPE::type; };
+template<typename TCONFIGTYPE, typename TDEFAULTIMPLICITTYPE, int NISCONFIGTYPECOMPLETE> using  configured_type_t = typename configured_type<TCONFIGTYPE, TDEFAULTIMPLICITTYPE, NISCONFIGTYPECOMPLETE>::type;
 
-using TCHARTYPE     = TCONFIGIMPLICITTYPE<dlogCharType, char, is_type_complete_v<dlogCharType>>::type;
-using TSTRING       = std::basic_string      <TCHARTYPE, std::char_traits<TCHARTYPE>, TCONFIGIMPLICITTYPE<dlogAllocatorType, std::allocator<TCHARTYPE>, is_type_complete_v<dlogAllocatorType>>::type>;
-using TSTRINGSTREAM = std::basic_stringstream<TCHARTYPE, std::char_traits<TCHARTYPE>, TCONFIGIMPLICITTYPE<dlogAllocatorType, std::allocator<TCHARTYPE>, is_type_complete_v<dlogAllocatorType>>::type>;
+#if defined(USE_WIDE_CHAR) || defined(UNICODE) || defined(_UNICODE)
+using TCHARTYPE     = wchar_t;
+#define DSTRING(in_string)  L##in_string
+#else
+using TCHARTYPE     = char;
+#define DSTRING(in_string)  in_string
+#endif//defined(USE_WIDE_CHAR) || defined(UNICODE) || defined(_UNICODE)
+
+using TSTRING       = std::basic_string      <TCHARTYPE, std::char_traits<TCHARTYPE>, configured_type_t<dlogAllocatorType, std::allocator<TCHARTYPE>, is_type_complete_v<dlogAllocatorType>>>;
+using TSTRINGSTREAM = std::basic_stringstream<TCHARTYPE, std::char_traits<TCHARTYPE>, configured_type_t<dlogAllocatorType, std::allocator<TCHARTYPE>, is_type_complete_v<dlogAllocatorType>>>;
 using TSTRINGVIEW   = std::basic_string_view <TCHARTYPE>;
 
 #ifndef NDEBUG
-static constexpr bool k_isDebugTarget = true ;
+static constexpr bool is_debug_target_v = true ;
 #else
-static constexpr bool k_isDebugTarget = false;
+static constexpr bool is_debug_target_v = false;
 #endif//NDEBUG
 
-template<typename TBASETYPE> struct StringConstantsImpl;
-template<> struct StringConstantsImpl<char    > final { static constexpr const char*    s_false = "false", *s_true = "true", *s_hexPrefix = "0x", s_hexZeroCh = '0', *s_default = "default", *s_info = "INF", *s_warning = "WRN", *s_error = "ERR", *s_dfatal = "DBG", *s_fatal = "FTL"; };
-template<> struct StringConstantsImpl<wchar_t > final { static constexpr const wchar_t* s_false =L"false", *s_true =L"true", *s_hexPrefix =L"0x", s_hexZeroCh =L'0', *s_default =L"default", *s_info =L"INF", *s_warning =L"WRN", *s_error =L"ERR", *s_dfatal =L"DBG", *s_fatal =L"FTL"; };
-using StringConstants = StringConstantsImpl<TCHARTYPE>;
+template<typename = void, typename... TARGS> struct has_customtype_stringifier : std::false_type { };
+template<typename... TARGS> struct has_customtype_stringifier<std::void_t<decltype(::dlogStringifyCustomType(std::declval<TARGS>()...))>, TARGS...> : std::true_type { };
+template<typename... TARGS> inline constexpr bool has_customtype_stringifier_v = has_customtype_stringifier<void, TARGS...>::value;
 
-template<typename = void, typename... Args> struct has_customtype_stringifier : std::false_type { };
-template<typename... Args> struct has_customtype_stringifier<std::void_t<decltype(::dlogStringifyCustomType(std::declval<Args>()...))>, Args...> : std::true_type { };
-template<typename... Args> inline constexpr bool has_customtype_stringifier_v = has_customtype_stringifier<void, Args...>::value;
-
-template<class T>
+template<typename T>
 void InvokeCustomTypeStringifier(TSTRINGSTREAM& inout_stream, const T in_value) 
 {
-    static_assert(has_customtype_stringifier_v<TSTRINGSTREAM&, T>, "Missing dlogStringifyCustomType implementation for the given type. Check compiler error(s) for details.");
-    if constexpr (has_customtype_stringifier_v<TSTRINGSTREAM&, T>)
+    static_assert(has_customtype_stringifier_v<TSTRINGSTREAM&, const T&>, "Missing dlogStringifyCustomType implementation for the given type. Check compiler error(s) for details.");
+    if constexpr (has_customtype_stringifier_v<TSTRINGSTREAM&, const T&>)
         ::dlogStringifyCustomType(inout_stream,  in_value);
 }
 }// dlog.
@@ -87,10 +88,10 @@ template<typename T, typename TRETURNTYPE = std::enable_if_t< std::is_fundamenta
 inline TRETURNTYPE dlogStringifyBuiltInType(dlog::TSTRINGSTREAM& inout_stream, const T in_value) noexcept
 {
     using   TBARETYPE = std::remove_reference_t<std::remove_cv_t<T>>;
-    if      constexpr (std::is_same_v<TBARETYPE, bool>) inout_stream << (in_value ? dlog::StringConstants::s_true : dlog::StringConstants::s_false);
+    if      constexpr (std::is_same_v<TBARETYPE, bool>) inout_stream << (in_value ? DSTRING("true") : DSTRING("false"));
     else if constexpr (std::is_same_v<TBARETYPE, std::remove_cv_t<const dlog::TCHARTYPE* const>>) inout_stream << in_value;
     else if constexpr (std::is_fundamental_v<TBARETYPE>) inout_stream << in_value;
-    else if constexpr (std::is_pointer_v    <TBARETYPE>) inout_stream << dlog::StringConstants::s_hexPrefix << std::uppercase << std::setfill(dlog::StringConstants::s_hexZeroCh) << std::setw(sizeof(const void*)) << std::hex << in_value;
+    else if constexpr (std::is_pointer_v    <TBARETYPE>) inout_stream << DSTRING("0x") << std::uppercase << std::setfill(DSTRING('0')) << std::setw(sizeof(const void*)) << std::hex << in_value;
     else dlog::InvokeCustomTypeStringifier(inout_stream, in_value);
 }
 
@@ -108,13 +109,13 @@ namespace dlog
 struct Frontend final
 {
     using TBACKENDFUNC = std::function<void(const TCHARTYPE*, const TCHARTYPE*)>;
-    const TCHARTYPE* newLine = "\n";
+    const TCHARTYPE* newLine = DSTRING("\n");
 
     template<int NLOGLEVEL>
     struct Stream final
     {
-        static constexpr bool k_streamEnabled = !(is_type_complete_v<dlogDisableLogger> || (!k_isDebugTarget && (NLOGLEVEL == DDFATAL)));
-        Stream(const TCHARTYPE* in_categoryName = StringConstants::s_default) noexcept
+        static constexpr bool k_streamEnabled = !(is_type_complete_v<dlogDisableLogger> || (!is_debug_target_v && (NLOGLEVEL == DDFATAL)));
+        Stream(const TCHARTYPE* in_categoryName = DSTRING("default")) noexcept
             : m_baseLogLevel (k_streamEnabled ? (*Frontend::GetInstancePtr()).logLevel : 0)
             , m_categoryName (in_categoryName) 
         { ; }
@@ -164,11 +165,11 @@ struct Frontend final
     {
         switch (in_logLevel)
         {
-        case DINFO    : inout_stream << StringConstants::s_info;    break;
-        case DWARNING : inout_stream << StringConstants::s_warning; break;
-        case DERROR   : inout_stream << StringConstants::s_error;   break;
-        case DDFATAL  : inout_stream << StringConstants::s_dfatal;  break;
-        case DFATAL   : inout_stream << StringConstants::s_fatal;   break;
+        case DINFO    : inout_stream << DSTRING("INF"); break;
+        case DWARNING : inout_stream << DSTRING("WRN"); break;
+        case DERROR   : inout_stream << DSTRING("ERR"); break;
+        case DDFATAL  : inout_stream << DSTRING("DBG"); break;
+        case DFATAL   : inout_stream << DSTRING("FTL"); break;
         }
     };
 
@@ -176,7 +177,7 @@ struct Frontend final
     {
         Frontend* instancePtr = nullptr;
         if (!std::atomic_compare_exchange_strong(&GetInstancePtr(), &instancePtr, this))
-            throw dlogException();
+            throw Exception();
     }
 
    ~Frontend() { std::atomic_store(&GetInstancePtr(), nullptr); }
@@ -194,10 +195,8 @@ private:
                 it(message.c_str(), in_optCategoryName);
         }
         else
-        {
             for (auto& it  : m_backends)
                 it(in_message.c_str(), in_optCategoryName);
-        }
     }
 };
 }// dlog.

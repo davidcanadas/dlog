@@ -43,7 +43,7 @@ The following data types are supported out of the box: `bool`, `char` (or `wchar
 ## Customizing **dlog**
 
 ```c++
-struct dlogCharType      { using type = wchar_t; }; // Define with the type of choice if you don't want to use char.
+// Character width (char vs wchar_t) depends on either UNICODE, _UNICODE or USE_WIDE_CHAR macros.
 struct dlogAllocatorType { using type = std::allocator<dlogCharType::type>; }; // Define with the allocator of choice if you don't want to use std::allocator<char>.
 struct dlogDisableLogger { }; // Define in order to disable logging.
 
@@ -64,7 +64,7 @@ void dlogStringifyCustomType(std::stringstream& inout_stream, const std::vector<
     inout_stream << '[';
     for (size_t i = 0, l = in_value.size(); i < l;)
     {
-        dlogStringifyBuiltInType(inout_stream, in_value.at(i));
+        ::dlogStringifyBuiltInType(inout_stream, in_value.at(i));
         if ((++i) != l)
             inout_stream << ',';
     }
